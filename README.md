@@ -186,3 +186,12 @@ resource "aws_nat_gateway" "NAT" {
 ### Error 1 :  
 
 <img width="402" height="126" alt="image" src="https://github.com/user-attachments/assets/c7719bd1-704a-498a-9957-dfc674ec107e" />
+
+
+##### Solution :  
+
+There was loop back between the command `instance = aws_nat_gateway.NAT` in my `aws_eip` block and `allocation_id = aws_eip.NAT_eip.id` in my `aws_nat_gateway` , Sice the Elastic IP used for NATGW , was pointng back to NATGW . 
+
+Therefore I removed `instance = aws_nat_gateway.NAT`  
+
+
