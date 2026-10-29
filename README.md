@@ -172,13 +172,131 @@ resource "aws_nat_gateway" "NAT" {
 ```
 
 
+## Creating and Deploying WordPress Application 
+
+Now that we have set up our environment , it is time to create and Deploy Wordpress
+
+
+1. Set up and Create Security Groups for our resources . 
+
+
+#### Table
+
+
+## Security Groups
+
+| security group | direction | port       | source / destination | notes |
+|----------------|-----------|------------|----------------------|-------|
+| **alb-sg**     | inbound   | 80 (TCP)   | `0.0.0.0/0`          | public HTTP traffic |
+| **alb-sg**     | outbound  | 80 (TCP)   | `ec2-sg`             | forwards to app instances |
+| **bastion-sg** | inbound   | 22 (TCP)   | `MYIP`               | your IP only |
+| **bastion-sg** | outbound  | 22 (TCP)   | `ec2-sg`             | SSH into private instances |
+| **ec2-sg**     | inbound   | 80 (TCP)   | `alb-sg`             | traffic from ALB only |
+| **ec2-sg**     | inbound   | 22 (TCP)   | `bastion-sg`         | SSH from bastion only |
+| **ec2-sg**     | outbound  | all        | `0.0.0.0/0`          | updates via NAT, RDS, etc. |
+| **rds-sg**     | inbound   | 3306 (TCP) | `ec2-sg`             | MySQL from app instances only |
+| **rds-sg**     | outbound  | none       | n/a                  | SGs are stateful, so replies are allowed automatically |
 
 
 
+1a . Code Structure 
+
+- First Create a resource block in which we are going to define our SG.
+
+````
+
+resource "aws_security_group"  "Name" {
+
+   name        = "Name"
+  description = "This is a description of what the Security Group should contain"
+  vpc_id      =  The ID of your VPC
+
+  tags = {
+    Name = ""   
+  }
+}
+
+````
+
+1b . Create Ingress(Incoming) & Egress(Outbound) traffic for security group rules and attach it security group.
+
+````
+resource "aws_vpc_security_group_ingress_rule" "Name" {
+  security_group_id = ID of your SG
+  referenced_security_group_id = Use this to reference to Other SGs
+  from_port         = 3306
+  ip_protocol       = "tcp"
+  to_port           = 3306
+}
+
+````
+
+
+2. Creating RDS 
+
+RDS (Relational Database Service) which is an AWS managed database service , where AWS manages deployment , updates , software pacthes and mnay more , you focus on the Database.
+
+
+Steps :
+
+1. Create a resource called `aws_subnet_group` which is used to define which subnets the RDS will be held in .
+
+```
+
+resource "aws_db_subnet_group" "Wordpress" {
+  name       = "Wordpress_subnet"
+  subnet_ids = [ aws_subnet.PrivateA.id , aws_subnet.PrivateB ]
+
+  tags = {
+    Name = "Private Subnets"
+  }
+}
 
 
 
+```
+2. Create a `db_instance` resource block which is used a create a isolated database with in the VPC.
 
+```
+resource "aws_db_instance" "Wordpres" {
+  identifier             = "Wordpress"
+  instance_class         = "db.t3.micro"
+  allocated_storage      = 5
+  engine                 = "mysql"
+  engine_version         = "18"
+  username               = "var.username"
+  password               = "var.password"
+  db_subnet_group_name   = aws_db_subnet_group.rds_subnet.name
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  parameter_group_name   = aws_db_parameter_group.Wordpres.name
+  publicly_accessible    = false
+  skip_final_snapshot    = true
+
+}
+
+
+
+```
+
+3. Create a paramter group for your `db_instance`
+
+- This use to configure your database engine itself
+
+```
+
+resource "aws_db_parameter_group" "Wordpres" {
+  name   = "Wordpress"
+  family = "mysql18.0"
+
+  parameter {
+    name  = "log_connections"
+    value = "all"
+  }
+}
+
+
+
+```
 
 ## Errors I encounterd :
 
