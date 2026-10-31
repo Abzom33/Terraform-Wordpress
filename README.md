@@ -298,6 +298,140 @@ resource "aws_db_parameter_group" "Wordpres" {
 
 ```
 
+4. Create your Wordpress EC2 Instance 
+
+You can do this using the `resource` block on Terraform .
+
+
+Ex:
+
+```
+resource "aws_instance" "WordpressA" {
+    instance_type = "t3.micro"
+    ami = "ami-0c230065b91270bc6"
+    user_data = templatefile("${path.module}/userdata.sh", {
+    db_name     = aws_db_instance.wordpress.db_name
+    db_user     = "ABZ_OM"
+    db_password = "coderco9990876"
+    db_host     = aws_db_instance.wordpress.address
+  })
+    subnet_id = aws_subnet.PrivateB.id
+    key_name = aws_key_pair.deployer.key_name
+    vpc_security_group_ids = [aws_security_group.ec2-sg.id]
+}
+
+```
+
+
+5. Set up user-data 
+You can set up your userdata to set and Install wordpress for your EC2 instances . User-data is a bootstrap script that you write to install dependencies onto to your instance when it boots up.
+
+
+`````
+
+#!/bin/bash
+dnf update -y
+dnf install -y httpd wget php php-mysqlnd php-fpm php-json php-gd php-mbstring php-xml
+systemctl enable --now httpd php-fpm
+
+cd /tmp
+wget https://wordpress.org/latest.tar.gz
+tar -xzf latest.tar.gz
+cp -r wordpress/* /var/www/html/
+
+cd /var/www/html
+cp wp-config-sample.php wp-config.php
+sed -i "s|database_name_here|${db_name}|" wp-config.php
+sed -i "s|username_here|${db_user}|" wp-config.php
+sed -i "s|password_here|${db_password}|" wp-config.php
+sed -i "s|localhost|${db_host}|" wp-config.php
+
+chown -R apache:apache /var/www/html
+systemctl restart httpd
+
+
+
+`````
+
+
+
+7.  Set up ALB
+
+- An ALB is set up to route to distrubute your traffic to your instance , perform heath checks and as additional security measure to avoid user to have direct access to your instance.
+
+7a. Create a Target Group
+
+- A target group is a set of destinations that ALB can route to such as EC2 , Conatiners.
+
+I created this by using this : https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/lb_target_group
+
+```
+resource "aws_lb_target_group" "my_tg_b" {
+  name = "target-groupB"
+  port     = 80
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.my-vpc.id
+}
+```
+
+
+7b .  Attach Instances to your Target Group 
+
+```
+resource "aws_lb_target_group_attachment" "WordpresA" {
+  target_group_arn = aws_lb_target_group.my_tg_b.arn
+  target_id        = aws_instance.WordpressA.id
+  port             = 80
+}
+
+
+```
+7c. Create the ALB 
+
+- This is an Internet facing ALB , which means it can access and recieve traffic from the Internet
+```
+resource "aws_lb" "my_alb" {
+  name               = "my-alb"
+  internal           = false
+  load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb-sg.id]
+   subnets           = [aws_subnet.PublicA.id , aws_subnet.PublicB.id]
+
+
+
+  tags = {
+    Environment = "production"
+  }
+}
+
+```
+
+7d. Attach a listener 
+
+- This is decides how your traffic gets hits via HHTP , HTTPS , SSH and what decides what to do with the Traffic such as Route forward to Target Group.
+
+This routes forward to my target group I specified earlier on Port 80 HTTP.
+
+```
+
+resource "aws_lb_listener" "B" {
+  load_balancer_arn = aws_lb.my_alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+  
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.my_tg_b.arn
+  }
+}
+
+```
+
+
+8. Final Result .
+
+
 ## Errors I encounterd :
 
 
