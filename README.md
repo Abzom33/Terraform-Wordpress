@@ -431,6 +431,7 @@ resource "aws_lb_listener" "B" {
 
 8. Final Result .
 
+<img width="1360" height="741" alt="image" src="https://github.com/user-attachments/assets/b321cb15-72ea-418c-8e8d-7e7874e2c3f7" />
 
 ## Errors I encounterd :
 
