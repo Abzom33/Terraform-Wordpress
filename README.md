@@ -466,6 +466,7 @@ resource "aws_instance" "bastion" {
 
 9 Final Result .
 
+<img width="1497" height="698" alt="image" src="https://github.com/user-attachments/assets/7ba5a7b6-8475-47ac-bd8d-dff1784e288d" />
 
 
 
