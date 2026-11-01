@@ -429,9 +429,45 @@ resource "aws_lb_listener" "B" {
 ```
 
 
-8. Final Result .
 
-<img width="1360" height="741" alt="image" src="https://github.com/user-attachments/assets/b321cb15-72ea-418c-8e8d-7e7874e2c3f7" />
+8. Set up a bastion host
+
+- A bastion host acts a controlled entry point into your private instance . It is an instance that sits in a public subnet in frint of your private instance inside a private subnet.
+
+8a. Create a bastion instance in the `Public Subnet A` 
+
+```
+
+resource "aws_instance" "bastion" {
+  ami = "ami-0c230065b91270bc6"
+  instance_type = "t2.micro"
+  subnet_id = aws_subnet.PublicA.id
+  key_name = aws_key_pair.deployer.key_name
+  vpc_security_group_ids = [aws_security_group.bastion-sg.id]
+  
+}
+
+
+```
+
+- I also created an Elastic IP to attach to my instance so that it would 1 public Ip address to use.
+
+
+```
+
+  resource "aws_eip" "bastion_eip" {
+    domain = "vpc"
+    instance = aws_instance.bastion.id
+  }
+
+```
+
+
+
+9 Final Result .
+
+
+
 
 ## Errors I encounterd :
 
