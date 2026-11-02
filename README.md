@@ -258,19 +258,22 @@ resource "aws_db_subnet_group" "Wordpress" {
 2. Create a `db_instance` resource block which is used a create a isolated database with in the VPC.
 
 ```
-resource "aws_db_instance" "Wordpres" {
-  identifier             = "Wordpress"
-  instance_class         = "db.t3.micro"
-  allocated_storage      = 5
+resource "aws_db_instance" "wordpress" {
+  db_name                =  "wpress"
+  identifier             = "wordpress"
+  instance_class         = var.instance_class
+  allocated_storage      =  20
   engine                 = "mysql"
-  engine_version         = "18"
-  username               = "var.username"
-  password               = "var.password"
-  db_subnet_group_name   = aws_db_subnet_group.rds_subnet.name
+  engine_version         = "8.0"
+  username               = var.username
+  password               = var.password
+  db_subnet_group_name   = aws_db_subnet_group.wordpress_subnet.name
   vpc_security_group_ids = [aws_security_group.rds.id]
-  parameter_group_name   = aws_db_parameter_group.Wordpres.name
+  parameter_group_name   = aws_db_parameter_group.wordpress_parameters.name
   publicly_accessible    = false
   skip_final_snapshot    = true
+  enabled_cloudwatch_logs_exports = ["general"]
+  
 
 }
 
@@ -284,15 +287,22 @@ resource "aws_db_instance" "Wordpres" {
 
 ```
 
-resource "aws_db_parameter_group" "Wordpres" {
-  name   = "Wordpress"
-  family = "mysql18.0"
+resource "aws_db_parameter_group" "wordpress_parameters" {
+  name   = "wordpress"
+  family = "mysql8.0"
 
   parameter {
-    name  = "log_connections"
-    value = "all"
+    name  = "general_log"
+    value = "1"
   }
+   parameter {
+    name  = "log_output"
+    value = "FILE"
+  }
+
+
 }
+
 
 
 
@@ -307,18 +317,19 @@ Ex:
 
 ```
 resource "aws_instance" "WordpressA" {
-    instance_type = "t3.micro"
-    ami = "ami-0c230065b91270bc6"
+    instance_type = var.instance_type[0]
+    ami = local.ami
     user_data = templatefile("${path.module}/userdata.sh", {
     db_name     = aws_db_instance.wordpress.db_name
-    db_user     = "ABZ_OM"
-    db_password = "coderco9990876"
+    db_user     = var.db_user
+    db_password = var.db_password
     db_host     = aws_db_instance.wordpress.address
   })
     subnet_id = aws_subnet.PrivateB.id
     key_name = aws_key_pair.deployer.key_name
     vpc_security_group_ids = [aws_security_group.ec2-sg.id]
 }
+  
 
 ```
 
@@ -439,8 +450,8 @@ resource "aws_lb_listener" "B" {
 ```
 
 resource "aws_instance" "bastion" {
-  ami = "ami-0c230065b91270bc6"
-  instance_type = "t2.micro"
+  ami = local.ami
+  instance_type = var.instance_type[1]
   subnet_id = aws_subnet.PublicA.id
   key_name = aws_key_pair.deployer.key_name
   vpc_security_group_ids = [aws_security_group.bastion-sg.id]
