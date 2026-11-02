@@ -3,3 +3,4 @@ key.tf
 secret.tfvars
 *.tfstate
 *.tfstate.*
+provider.tf
