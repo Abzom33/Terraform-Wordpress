@@ -1,6 +1,6 @@
 ﻿# Deploying WordPress on AWS with Terraform
 
-n this project I used Terraform to deploy WordPress on AWS. Everything is built as code. The network, the servers, the database and the load balancer are all in Terraform.
+In this project I used Terraform to deploy WordPress on AWS. Everything is built as code. The network, the servers, the database and the load balancer are all in Terraform.
 
 ## What gets built
 
